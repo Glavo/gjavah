@@ -1,7 +1,5 @@
 package org.glavo.javah;
 
-import org.junit.Test;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 

@@ -3,12 +3,15 @@ package org.glavo.javah;
 import org.objectweb.asm.*;
 
 import java.io.*;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 public final class HeaderGenerator {
+    private static final Path[] EMPTY_PATH_ARRAY = new Path[0];
+    private static final List<String> THROWABLE_NAME_LIST = Arrays.asList("Ljava/lang/Throwable;", "Ljava/lang/Error;", "Ljava/lang/Exception");
+    private static final HeaderGenerator generator = new HeaderGenerator();
+
     private static String escape(String source) {
         StringBuilder builder = new StringBuilder();
         char ch;
@@ -37,7 +40,105 @@ public final class HeaderGenerator {
         return builder.toString();
     }
 
-    private static String typeToNative(Type tpe) {
+    public static void generateFunctionDeclarations(ClassReader reader, PrintWriter output) {
+        getGenerator().classGenerateFunctionDeclarations(reader, output);
+    }
+
+    public static void generateHeader(ClassReader reader, PrintWriter output) {
+        getGenerator().classGenerateHeader(reader, output);
+    }
+
+    public static void generateHeader(byte[] classFile, PrintWriter output) {
+        getGenerator().classGenerateHeader(classFile, output);
+    }
+
+    public static void generateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
+        getGenerator().classGenerateHeader(classFileBuffer, classFileOffset, classFileLength, output);
+    }
+
+    public static void generateHeader(String className, PrintWriter output) throws IOException {
+        getGenerator().classGenerateHeader(className, output);
+    }
+
+    public static void generateHeader(InputStream input, PrintWriter output) throws IOException {
+        getGenerator().classGenerateHeader(input, output);
+    }
+
+    public static HeaderGenerator getGenerator() {
+        return generator;
+    }
+
+    private Path[] classPaths;
+    private boolean useRuntimeClassPath;
+
+    public HeaderGenerator() {
+        this(EMPTY_PATH_ARRAY, true);
+    }
+
+    public HeaderGenerator(boolean useRuntimeClassPath) {
+        this(EMPTY_PATH_ARRAY, useRuntimeClassPath);
+    }
+
+    public HeaderGenerator(Path[] classPaths) {
+        this(classPaths, true);
+    }
+
+    public HeaderGenerator(Path[] classPaths, boolean useRuntimeClassPath) {
+        Objects.requireNonNull(classPaths);
+        this.classPaths = classPaths;
+        this.useRuntimeClassPath = useRuntimeClassPath;
+    }
+
+    private boolean isThrowable(Type type) {
+        String desc = type.getDescriptor();
+        if (!desc.startsWith("L")) {
+            return false;
+        }
+        if (classPaths.length == 0 && !useRuntimeClassPath) {
+            return THROWABLE_NAME_LIST.contains(type.getDescriptor());
+        }
+        String className = type.getInternalName();
+        while (true) {
+            if (className == null) {
+                return false;
+            }
+            if (className.equals("java/lang/Throwable")) {
+                return true;
+            }
+            try {
+                ClassReader reader = null;
+                loop:
+                for (Path path : classPaths) {
+                    if (!Files.exists(path)) {
+                        continue;
+                    }
+                    String[] ps = (className + ".class").split("/");
+                    for (String p : ps) {
+                        path = path.resolve(p);
+                        if (!Files.exists(path)) {
+                            continue loop;
+                        }
+                    }
+                    try {
+                        reader = new ClassReader(Files.newInputStream(path));
+                        break;
+                    } catch (IOException ignored) {
+                    }
+                }
+                if (reader == null && useRuntimeClassPath) {
+                    reader = new ClassReader(className.replace('/', '.'));
+                }
+                if (reader == null) {
+                    return false;
+                }
+                className = reader.getSuperName();
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+    }
+
+    private String typeToNative(Type tpe) {
         if (tpe == Type.BOOLEAN_TYPE) {
             return "jboolean";
         } else if (tpe == Type.BYTE_TYPE) {
@@ -57,38 +158,30 @@ public final class HeaderGenerator {
         } else if (tpe == Type.VOID_TYPE) {
             return "void";
         } else {
-            String str = tpe.toString();
-            if (str.startsWith("[")) {
-                str = typeToNative(tpe.getElementType());
-                if ("jclass".equals(str)) {
+            String desc = tpe.getDescriptor();
+            if (desc.startsWith("[")) {
+                Type elemTpe = tpe.getElementType();
+                String descriptor = elemTpe.getDescriptor();
+                if (descriptor.startsWith("[") || descriptor.startsWith("L")) {
                     return "jobjectArray";
-                } else {
-                    return str + "Array";
                 }
+                return typeToNative(elemTpe) + "Array";
             }
-            return "jobject"; //TODO: jthrowable
+            if (desc.equals("Ljava/lang/String;")) {
+                return "jstring";
+            }
+            if (desc.equals("Ljava/lang/Class;")) {
+                return "jclass";
+            }
+            if (isThrowable(tpe)) {
+                return "jthrowable";
+            }
+            return "jobject";
         }
     }
 
-    public static void generateHeader(ClassReader reader, PrintWriter output) {
-        output.println("/* DO NOT EDIT THIS FILE - it is machine generated */");
-        output.println("#include <jni.h>");
-
-        Generator generator = new Generator();
-        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-
-        StringBuilder builder = new StringBuilder();
+    private void classGenerateFunctionDeclarations(Generator generator, PrintWriter output) {
         String className = escape(generator.getClassName());
-
-        output.println("/* Header for class " + className + " */");
-
-        String includeHeader = "_Include_" + className;
-        output.println("#ifndef " + includeHeader);
-        output.println("#define " + includeHeader);
-
-        output.println("#ifdef __cplusplus\n" +
-                "extern \"C\" {\n" +
-                "#endif");
 
         for (Map.Entry<String, Set<MethodDesc>> entry : generator.getMethods().entrySet()) {
             boolean overload = entry.getValue().size() > 1;
@@ -129,6 +222,35 @@ public final class HeaderGenerator {
             }
 
         }
+    }
+
+    public void classGenerateFunctionDeclarations(ClassReader reader, PrintWriter output) {
+        Generator generator = new Generator();
+        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        classGenerateFunctionDeclarations(generator, output);
+    }
+
+    public void classGenerateHeader(ClassReader reader, PrintWriter output) {
+        output.println("/* DO NOT EDIT THIS FILE - it is machine generated */");
+        output.println("#include <jni.h>");
+
+        Generator generator = new Generator();
+        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+
+        StringBuilder builder = new StringBuilder();
+        String className = escape(generator.getClassName());
+
+        output.println("/* Header for class " + className + " */");
+
+        String includeHeader = "_Include_" + className;
+        output.println("#ifndef " + includeHeader);
+        output.println("#define " + includeHeader);
+
+        output.println("#ifdef __cplusplus\n" +
+                "extern \"C\" {\n" +
+                "#endif");
+
+        classGenerateFunctionDeclarations(generator, output);
 
         output.println("#ifdef __cplusplus\n" +
                 "}\n" +
@@ -137,27 +259,40 @@ public final class HeaderGenerator {
 
     }
 
-    public static void generateHeader(byte[] classFile, PrintWriter output) {
-        generateHeader(new ClassReader(classFile), output);
+    public void classGenerateHeader(byte[] classFile, PrintWriter output) {
+        classGenerateHeader(new ClassReader(classFile), output);
     }
 
-    public static void generateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
-        generateHeader(new ClassReader(classFileBuffer, classFileOffset, classFileLength), output);
+    public void classGenerateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
+        classGenerateHeader(new ClassReader(classFileBuffer, classFileOffset, classFileLength), output);
     }
 
-    public static void generateHeader(String className, PrintWriter output) throws IOException {
-        generateHeader(new ClassReader(className), output);
+    public void classGenerateHeader(String className, PrintWriter output) throws IOException {
+        classGenerateHeader(new ClassReader(className), output);
     }
 
-    public static void generateHeader(InputStream input, PrintWriter output) throws IOException {
-        generateHeader(new ClassReader(input), output);
+    public void classGenerateHeader(InputStream input, PrintWriter output) throws IOException {
+        classGenerateHeader(new ClassReader(input), output);
+    }
+
+    public Path[] getClassPaths() {
+        return classPaths;
+    }
+
+    public void setClassPaths(Path[] classPaths) {
+        Objects.requireNonNull(classPaths);
+        this.classPaths = classPaths;
+    }
+
+    public boolean isUseRuntimeClassPath() {
+        return useRuntimeClassPath;
+    }
+
+    public void setUseRuntimeClassPath(boolean useRuntimeClassPath) {
+        this.useRuntimeClassPath = useRuntimeClassPath;
     }
 
     public static void main(String[] args) throws IOException {
-        File f = new File(args[0]);
-        PrintWriter writer = new PrintWriter(System.out);
-        generateHeader(new FileInputStream(f), writer);
-        writer.flush();
     }
 }
 
