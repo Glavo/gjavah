@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.glavo.glavo:gjavah:0.1.0'
+    compile 'org.glavo.glavo:gjavah:0.1.1'
 }
 ```
 
