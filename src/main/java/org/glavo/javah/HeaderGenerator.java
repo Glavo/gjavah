@@ -350,7 +350,7 @@ public final class HeaderGenerator {
                         System.out.println(message);
                         return;
                     case "-version":
-                        System.out.println();
+                        System.out.println(VERSION);
                         return;
                     case "-cp":
                     case "-classpath":
