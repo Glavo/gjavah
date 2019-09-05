@@ -38,10 +38,10 @@ public final class HeaderGenerator {
                     builder.append("_3");
                     break;
                 case '/':
-                    builder.append('.');
+                    builder.append('_');
                     break;
                 default:
-                    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
+                    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
                         builder.append(ch);
                     } else {
                         builder.append("_0").append(String.format("%04x", (int) ch));
@@ -188,8 +188,8 @@ public final class HeaderGenerator {
                     continue loop;
                 }
             }
-            try {
-                return new ClassReader(Files.newInputStream(path));
+            try (InputStream is = Files.newInputStream(path)) {
+                return new ClassReader(is);
             } catch (IOException ignored) {
             }
         }
@@ -203,6 +203,19 @@ public final class HeaderGenerator {
     private void classGenerateFunctionDeclarations(Generator generator, PrintWriter output) {
         String className = escape(generator.getClassName());
 
+        for (Map.Entry<String, Object> entry: generator.getConstants().entrySet()) {
+            String constant = className + '_' + entry.getKey();
+            String value = entry.getValue().toString();
+            if(entry.getValue() instanceof Integer)
+                value += "L";
+            else if(entry.getValue() instanceof Long)
+                value += "LL";
+            else if(entry.getValue() instanceof Float)
+                value += "f";
+            output.println("#undef " + constant);
+            output.println("#define " + constant + ' ' + value);
+        }
+
         for (Map.Entry<String, Set<MethodDesc>> entry : generator.getMethods().entrySet()) {
             boolean overload = entry.getValue().size() > 1;
             for (MethodDesc desc : entry.getValue()) {
@@ -210,7 +223,7 @@ public final class HeaderGenerator {
                 output.println("/*" + "\n" +
                         " * Class:     " + className + "\n" +
                         " * Method:    " + entry.getKey() + "\n" +
-                        " * Signature: " + desc.descriptor + "\n" +
+                        " * Signature: " + desc.descriptor.replace('$', '/') + "\n" +
                         " */"
                 );
 
@@ -255,8 +268,9 @@ public final class HeaderGenerator {
         String className = escape(generator.getClassName());
 
         output.println("/* Header for class " + className + " */");
+        output.println();
 
-        String includeHeader = "_Include_" + className;
+        String includeHeader = "_Included_" + className;
         output.println("#ifndef " + includeHeader);
         output.println("#define " + includeHeader);
 
@@ -269,7 +283,7 @@ public final class HeaderGenerator {
         output.println("#ifdef __cplusplus\n" +
                 "}\n" +
                 "#endif\n" +
-                "#endif\n");
+                "#endif");
     }
 
     private void classGenerateHeaderWithoutInclude(ClassReader reader, PrintWriter output) {
@@ -493,7 +507,7 @@ class MethodDesc {
 class Generator extends ClassVisitor {
     private String className;
 
-    private Map<String, String> constants = new LinkedHashMap<>();
+    private Map<String, Object> constants = new LinkedHashMap<>();
     private Map<String, Set<MethodDesc>> methods = new LinkedHashMap<String, Set<MethodDesc>>();
 
     public Generator() {
@@ -503,6 +517,14 @@ class Generator extends ClassVisitor {
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         className = name;
+    }
+
+    @Override
+    public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+        if (value instanceof Number) {
+            constants.put(name, value);
+        }
+        return null;
     }
 
     @Override
@@ -524,6 +546,10 @@ class Generator extends ClassVisitor {
     }
 
     public Map<String, Set<MethodDesc>> getMethods() {
-        return methods;
+      return methods;
+    }
+
+    public Map<String, Object> getConstants() {
+        return constants;
     }
 }
