@@ -1,86 +1,30 @@
 package org.glavo.javah;
 
-import org.objectweb.asm.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
 
 public final class HeaderGenerator {
     private static final Path[] EMPTY_PATH_ARRAY = new Path[0];
     private static final List<String> THROWABLE_NAME_LIST = Arrays.asList("Ljava/lang/Throwable;", "Ljava/lang/Error;", "Ljava/lang/Exception");
-    private static final HeaderGenerator generator = new HeaderGenerator();
-    public static final String VERSION = "0.1.1";
-    private static final String message = "Usage: \n" +
-            "  javah [options] <classes>\n" +
-            "where [options] include:\n" +
-            "  -o <file>                Output file (only one of -d or -o may be used)\n" +
-            "  -d <dir>                 Output directory\n" +
-            "  -h  -help --help  -?     Print this message\n" +
-            "  -version                 Print version information\n" +
-            "  -classpath <path>        Path from which to load classes\n" +
-            "  -cp <path>               Path from which to load classes\n" +
-            "<classes> are specified with their fully qualified names\n" +
-            "(for example, java.lang.Object).";
-
-    private static String escape(String source) {
-        StringBuilder builder = new StringBuilder();
-        char ch;
-        for (int i = 0; i < source.length(); i++) {
-            switch (ch = source.charAt(i)) {
-                case '_':
-                    builder.append("_1");
-                    break;
-                case ';':
-                    builder.append("_2");
-                    break;
-                case '[':
-                    builder.append("_3");
-                    break;
-                case '/':
-                    builder.append('.');
-                    break;
-                default:
-                    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
-                        builder.append(ch);
-                    } else {
-                        builder.append("_0").append(String.format("%04x", (int) ch));
-                    }
-            }
-        }
-        return builder.toString();
-    }
-
-    public static void generateFunctionDeclarations(ClassReader reader, PrintWriter output) {
-        getGenerator().classGenerateFunctionDeclarations(reader, output);
-    }
-
-    public static void generateHeader(ClassReader reader, PrintWriter output) {
-        getGenerator().classGenerateHeader(reader, output);
-    }
-
-    public static void generateHeader(byte[] classFile, PrintWriter output) {
-        getGenerator().classGenerateHeader(classFile, output);
-    }
-
-    public static void generateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
-        getGenerator().classGenerateHeader(classFileBuffer, classFileOffset, classFileLength, output);
-    }
-
-    public static void generateHeader(String className, PrintWriter output) throws IOException {
-        getGenerator().classGenerateHeader(className, output);
-    }
-
-    public static void generateHeader(InputStream input, PrintWriter output) throws IOException {
-        getGenerator().classGenerateHeader(input, output);
-    }
-
-    public static HeaderGenerator getGenerator() {
-        return generator;
-    }
 
     private Path[] classPaths;
     private boolean useRuntimeClassPath;
+    private Map<String, ClassReader> readerCache = new HashMap<>();
 
     public HeaderGenerator() {
         this(EMPTY_PATH_ARRAY, true);
@@ -100,6 +44,114 @@ public final class HeaderGenerator {
         this.useRuntimeClassPath = useRuntimeClassPath;
     }
 
+    public Path[] getClassPaths() {
+        return classPaths;
+    }
+
+    public void setClassPaths(Path[] classPaths) {
+        Objects.requireNonNull(classPaths);
+        this.classPaths = classPaths;
+    }
+
+    public boolean isUseRuntimeClassPath() {
+        return useRuntimeClassPath;
+    }
+
+    public void setUseRuntimeClassPath(boolean useRuntimeClassPath) {
+        this.useRuntimeClassPath = useRuntimeClassPath;
+    }
+
+    public void generateSingleFile(Path outputFile, Collection<String> classNames)
+            throws IOException {
+        Files.createDirectories(outputFile.getParent());
+        boolean first = true;
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
+            for (String name : classNames) {
+                NativeMethodVisitor g = getRequiredNativeMethodVisitor(name);
+                if (g.isEmpty()) {
+                    continue;
+                }
+                if (first) {
+                    classGenerateHeader(g, writer);
+                    first = false;
+                } else {
+                    classGenerateHeaderWithoutInclude(g, writer);
+                }
+            }
+        }
+    }
+
+    public void generateMultipleFiles(Path outputDir, Collection<String> classNames)
+            throws IOException {
+        Files.createDirectories(outputDir);
+        for (String name : classNames) {
+            NativeMethodVisitor g = getRequiredNativeMethodVisitor(name);
+            if (g.isEmpty()) {
+                continue;
+            }
+            Path headerFile = outputDir.resolve(g.getClassName()
+                .replace('.', '_')
+                .replace('/', '_')
+                .replace('$', '_') + ".h");
+            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(headerFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
+                classGenerateHeader(g, writer);
+            }
+        }
+    }
+
+    public void generateHeader(String className, PrintWriter output) throws IOException {
+        classGenerateHeader(className, output);
+    }
+
+    public void generateFunctionDeclarations(ClassReader reader, PrintWriter output) {
+        classGenerateFunctionDeclarations(reader, output);
+    }
+
+    public void generateHeader(ClassReader reader, PrintWriter output) {
+        classGenerateHeader(reader, output);
+    }
+
+    public void generateHeader(byte[] classFile, PrintWriter output) {
+        classGenerateHeader(classFile, output);
+    }
+
+    public void generateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
+        classGenerateHeader(classFileBuffer, classFileOffset, classFileLength, output);
+    }
+
+    public void generateHeader(InputStream input, PrintWriter output) throws IOException {
+        classGenerateHeader(input, output);
+    }
+
+
+    private static String escape(String source) {
+        StringBuilder builder = new StringBuilder();
+        char ch;
+        for (int i = 0; i < source.length(); i++) {
+            switch (ch = source.charAt(i)) {
+                case '_':
+                    builder.append("_1");
+                    break;
+                case ';':
+                    builder.append("_2");
+                    break;
+                case '[':
+                    builder.append("_3");
+                    break;
+                case '/':
+                    builder.append('_');
+                    break;
+                default:
+                    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
+                        builder.append(ch);
+                    } else {
+                        builder.append("_0").append(String.format("%04x", (int) ch));
+                    }
+            }
+        }
+        return builder.toString();
+    }
+
     private boolean isThrowable(Type type) {
         String desc = type.getDescriptor();
         if (!desc.startsWith("L")) {
@@ -117,11 +169,7 @@ public final class HeaderGenerator {
                 return true;
             }
             try {
-                ClassReader reader = findClass(className);
-                if (reader == null) {
-                    return false;
-                }
-                className = reader.getSuperName();
+                className = findClass(className).getSuperName();
             } catch (Exception ignored) {
                 return false;
             }
@@ -170,13 +218,43 @@ public final class HeaderGenerator {
         }
     }
 
-    private ClassReader findClass(String name) {
+    private ClassReader findClass(String name)
+        throws IOException {
+        if (readerCache.containsKey(name)) {
+            return readerCache.get(name);
+        }
+        ClassReader ret;
+        Path directPath = Paths.get(name);
+        if (Files.exists(directPath)) {
+            ret = findClassByFile(directPath);
+        } else {
+            ret = findClassByName(name);
+        }
+        readerCache.put(name, ret);
+        return ret;
+    }
+
+    private ClassReader findClassByFile(Path path)
+        throws IOException {
+        try (InputStream is = Files.newInputStream(path)) {
+            return new ClassReader(is);
+        }
+    }
+
+    private ClassReader findClassByName(String name)
+        throws IOException {
+
         loop:
         for (Path path : classPaths) {
             path = path.toAbsolutePath();
             if (!Files.exists(path)) {
                 continue;
             }
+            Path filePath = path.resolve(name);
+            if (Files.exists(filePath)) {
+                return findClassByFile(filePath);
+            }
+
             String[] ps = name.split("/|\\.");
             if (ps.length == 0) {
                 continue;
@@ -188,29 +266,40 @@ public final class HeaderGenerator {
                     continue loop;
                 }
             }
-            try {
-                return new ClassReader(Files.newInputStream(path));
-            } catch (IOException ignored) {
-            }
+            return findClassByFile(path);
         }
-        try {
-            return new ClassReader(name.replace('/', '.'));
-        } catch (IOException e) {
-            return null;
-        }
+
+        return new ClassReader(name.replace('/', '.'));
     }
 
-    private void classGenerateFunctionDeclarations(Generator generator, PrintWriter output) {
-        String className = escape(generator.getClassName());
+    private void classGenerateFunctionDeclarations(NativeMethodVisitor visitor, PrintWriter output) {
+        String className = escape(visitor.getClassName());
 
-        for (Map.Entry<String, Set<MethodDesc>> entry : generator.getMethods().entrySet()) {
+        for (Map.Entry<String, Object> entry: visitor.getConstants().entrySet()) {
+            String constant = className + '_' + entry.getKey();
+            String value = entry.getValue().toString();
+            if(entry.getValue() instanceof Integer)
+                value += "L";
+            else if(entry.getValue() instanceof Long)
+                value += "LL";
+            else if(entry.getValue() instanceof Float)
+                value += "f";
+            output.println("#undef " + constant);
+            output.println("#define " + constant + ' ' + value);
+        }
+
+        for (Map.Entry<String, Set<MethodDesc>> entry : visitor.getMethods().entrySet()) {
             boolean overload = entry.getValue().size() > 1;
             for (MethodDesc desc : entry.getValue()) {
                 String methodName = escape(entry.getKey());
+                String readableClassName = visitor.getClassName()
+                        .replace('.', '_')
+                        .replace('/', '_')
+                        .replace('$', '_');
                 output.println("/*" + "\n" +
-                        " * Class:     " + className + "\n" +
+                        " * Class:     " + readableClassName + "\n" +
                         " * Method:    " + entry.getKey() + "\n" +
-                        " * Signature: " + desc.descriptor + "\n" +
+                        " * Signature: " + desc.descriptor.replace('$', '/') + "\n" +
                         " */"
                 );
 
@@ -244,19 +333,19 @@ public final class HeaderGenerator {
         }
     }
 
-    public void classGenerateFunctionDeclarations(ClassReader reader, PrintWriter output) {
-        Generator generator = new Generator();
-        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        classGenerateFunctionDeclarations(generator, output);
+    private void classGenerateFunctionDeclarations(ClassReader reader, PrintWriter output) {
+        NativeMethodVisitor visitor = new NativeMethodVisitor();
+        reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        classGenerateFunctionDeclarations(visitor, output);
     }
 
-    private void classGenerateHeaderWithoutInclude(Generator generator, PrintWriter output) {
-        StringBuilder builder = new StringBuilder();
-        String className = escape(generator.getClassName());
+    private void classGenerateHeaderWithoutInclude(NativeMethodVisitor visitor, PrintWriter output) {
+        String className = escape(visitor.getClassName()).replace("_00024", "_");
 
         output.println("/* Header for class " + className + " */");
+        output.println();
 
-        String includeHeader = "_Include_" + className;
+        String includeHeader = "_Included_" + className;
         output.println("#ifndef " + includeHeader);
         output.println("#define " + includeHeader);
 
@@ -264,266 +353,66 @@ public final class HeaderGenerator {
                 "extern \"C\" {\n" +
                 "#endif");
 
-        classGenerateFunctionDeclarations(generator, output);
+        classGenerateFunctionDeclarations(visitor, output);
 
         output.println("#ifdef __cplusplus\n" +
                 "}\n" +
                 "#endif\n" +
-                "#endif\n");
+                "#endif");
     }
 
     private void classGenerateHeaderWithoutInclude(ClassReader reader, PrintWriter output) {
-        Generator generator = new Generator();
-        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        classGenerateHeaderWithoutInclude(generator, output);
+        NativeMethodVisitor visitor = new NativeMethodVisitor();
+        reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        classGenerateHeaderWithoutInclude(visitor, output);
     }
 
-    private void classGenerateHeader(Generator generator, PrintWriter output) {
+    private void classGenerateHeader(NativeMethodVisitor visitor, PrintWriter output) {
         output.println("/* DO NOT EDIT THIS FILE - it is machine generated */");
         output.println("#include <jni.h>");
 
-        classGenerateHeaderWithoutInclude(generator, output);
+        classGenerateHeaderWithoutInclude(visitor, output);
     }
 
-    public void classGenerateHeader(ClassReader reader, PrintWriter output) {
-        Generator generator = new Generator();
-        reader.accept(generator, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        classGenerateHeader(generator, output);
+    private void classGenerateHeader(ClassReader reader, PrintWriter output) {
+        NativeMethodVisitor visitor = new NativeMethodVisitor();
+        reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        classGenerateHeader(visitor, output);
     }
 
-    public void classGenerateHeader(byte[] classFile, PrintWriter output) {
+    private void classGenerateHeader(byte[] classFile, PrintWriter output) {
         classGenerateHeader(new ClassReader(classFile), output);
     }
 
-    public void classGenerateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
+    private void classGenerateHeader(byte[] classFileBuffer, int classFileOffset, int classFileLength, PrintWriter output) {
         classGenerateHeader(new ClassReader(classFileBuffer, classFileOffset, classFileLength), output);
     }
 
-    public void classGenerateHeader(String className, PrintWriter output) throws IOException {
-        ClassReader reader = findClass(className);
-        if (reader == null) {
-            throw new IOException();
-        }
-        classGenerateHeader(reader, output);
+    private void classGenerateHeader(String className, PrintWriter output) throws IOException {
+        classGenerateHeader(findClass(className), output);
     }
 
-    public void classGenerateHeader(InputStream input, PrintWriter output) throws IOException {
+    private void classGenerateHeader(InputStream input, PrintWriter output) throws IOException {
         classGenerateHeader(new ClassReader(input), output);
     }
 
-    public Path[] getClassPaths() {
-        return classPaths;
-    }
-
-    public void setClassPaths(Path[] classPaths) {
-        Objects.requireNonNull(classPaths);
-        this.classPaths = classPaths;
-    }
-
-    public boolean isUseRuntimeClassPath() {
-        return useRuntimeClassPath;
-    }
-
-    public void setUseRuntimeClassPath(boolean useRuntimeClassPath) {
-        this.useRuntimeClassPath = useRuntimeClassPath;
-    }
-
-    public static void main(String[] args) throws IOException {
-        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("windows");
-        ArrayList<Path> cps = new ArrayList<>();
-        Path outputFile = null;
-        Path outputDir = null;
-        ArrayList<String> classNames = new ArrayList<>();
-
-        if (args.length == 0) {
-            System.out.println(message);
-            return;
+    private NativeMethodVisitor getRequiredNativeMethodVisitor(String className) {
+        ClassReader reader;
+        try {
+            reader = findClass(className);
+        } catch(IOException ioe) {
+            System.err.println("Error: Could not find class file for '" + className + "'.");
+            System.err.println("Classpath: ");
+            for (Path p : classPaths) {
+                System.err.println(" - " + p.toString());
+            }
+            System.exit(187);
+            return null;
         }
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.startsWith("-")) {
-                switch (arg) {
-                    case "-h":
-                    case "-help":
-                    case "--help":
-                    case "-?":
-                        System.out.println(message);
-                        return;
-                    case "-version":
-                        System.out.println(VERSION);
-                        return;
-                    case "-cp":
-                    case "-classpath":
-                        i++;
-                        if (i == args.length) {
-                            System.err.println("javah: " + arg + " requires an argument.");
-                            return;
-                        }
-                        String[] s = args[i].split(isWindows ? ";" : ":");
-                        for (String ss : s) {
-                            Path p = Paths.get(ss);
-                            if (Files.exists(p)) {
-                                if (Files.isDirectory(p)) {
-                                    cps.add(p);
-                                } else if (ss.toLowerCase().endsWith(".jar") || ss.toLowerCase().endsWith(".zip")) {
-                                    try {
-                                        cps.add(FileSystems.newFileSystem(p, null).getPath("/"));
-                                    } catch (Exception ignored) {
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case "-o":
-                        i++;
-                        if (i == args.length) {
-                            System.err.println("javah: " + arg + " requires an argument.");
-                            return;
-                        }
-                        if (outputDir != null) {
-                            System.err.println("Error: Can't mix options -d and -o.  Try -help.");
-                            return;
-                        }
-                        outputFile = Paths.get(args[i]);
-                        break;
-
-                    case "-d":
-                        i++;
-                        if (i == args.length) {
-                            System.err.println("javah: " + arg + " requires an argument.");
-                            return;
-                        }
-                        if (outputFile != null) {
-                            System.err.println("Error: Can't mix options -d and -o.  Try -help.");
-                            return;
-                        }
-                        outputDir = Paths.get(args[i]);
-
-                        break;
-                    default:
-                        System.err.println("Error: unknown option: " + arg);
-                        return;
-                }
-
-            } else {
-                if (arg.contains("/")) {
-                    int idx = arg.indexOf('/');
-                    if (idx != arg.lastIndexOf('/')) {
-                        System.err.println("Not a valid class name: " + arg);
-                    }
-                    arg = arg.substring(idx + 1);
-                }
-                classNames.add(arg);
-            }
-
-            if (outputDir == null && outputFile == null) {
-                outputDir = Paths.get(System.getProperty("user.dir", "."));
-            }
-            if (cps.isEmpty()) {
-                cps.add(Paths.get(System.getProperty("user.dir", ".")));
-            }
-
-            if (outputDir != null && Files.notExists(outputDir)) {
-                Files.createDirectories(outputDir);
-            }
-
-            if (outputFile != null && Files.notExists(outputFile)) {
-                if (Files.notExists(outputFile.getParent())) {
-                    Files.createDirectories(outputFile.getParent());
-                }
-            }
-
-            HeaderGenerator generator = new HeaderGenerator(cps.toArray(new Path[0]));
-            if (outputFile != null) {
-                if (Files.notExists(outputFile.getParent())) {
-                    Files.createDirectories(outputFile.getParent());
-                }
-                try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
-                    boolean first = true;
-                    for (String name : classNames) {
-                        ClassReader reader = generator.findClass(name);
-                        if (reader == null) {
-                            System.err.println("Error: Could not find class file for '" + name + "'.");
-                            return;
-                        }
-                        Generator g = new Generator();
-                        reader.accept(g, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                        if (first) {
-                            generator.classGenerateHeader(g, writer);
-                            first = false;
-                        } else {
-                            generator.classGenerateHeaderWithoutInclude(g, writer);
-                        }
-                    }
-                }
-            }
-            if (outputDir != null) {
-                if (Files.notExists(outputDir)) {
-                    Files.createDirectories(outputDir);
-                }
-                for (String name : classNames) {
-                    ClassReader reader = generator.findClass(name);
-                    if (reader == null) {
-                        System.err.println("Error: Could not find class file for '" + name + "'.");
-                        return;
-                    }
-                    Generator g = new Generator();
-                    reader.accept(g, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-
-                    try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputDir.resolve(name.replace('.', '_') + ".h"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
-                        generator.classGenerateHeader(g, writer);
-                    }
-                }
-            }
-
-        }
+        NativeMethodVisitor ret = new NativeMethodVisitor();
+        reader.accept(ret, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return ret;
     }
+
 }
 
-class MethodDesc {
-    public final boolean isStatic;
-    public final String descriptor;
-
-    public MethodDesc(boolean isStatic, String descriptor) {
-        this.isStatic = isStatic;
-        this.descriptor = descriptor;
-    }
-}
-
-class Generator extends ClassVisitor {
-    private String className;
-
-    private Map<String, String> constants = new LinkedHashMap<>();
-    private Map<String, Set<MethodDesc>> methods = new LinkedHashMap<String, Set<MethodDesc>>();
-
-    public Generator() {
-        super(Opcodes.ASM5);
-    }
-
-    @Override
-    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        className = name;
-    }
-
-    @Override
-    public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-        if ((access & Opcodes.ACC_NATIVE) != 0) {
-            if (methods.containsKey(name)) {
-                methods.get(name).add(new MethodDesc((access & Opcodes.ACC_STATIC) != 0, descriptor));
-            } else {
-                LinkedHashSet<MethodDesc> set = new LinkedHashSet<>();
-                set.add(new MethodDesc((access & Opcodes.ACC_STATIC) != 0, descriptor));
-                methods.put(name, set);
-            }
-        }
-        return null;
-    }
-
-    public String getClassName() {
-        return className;
-    }
-
-    public Map<String, Set<MethodDesc>> getMethods() {
-        return methods;
-    }
-}

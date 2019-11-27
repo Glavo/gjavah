@@ -6,7 +6,8 @@ import java.io.PrintWriter;
 public class HeaderGeneratorTest {
     public static void main(String[] args) throws IOException {
         PrintWriter writer = new PrintWriter(System.out);
-        HeaderGenerator.generateHeader("java.lang.System", writer);
+        HeaderGenerator generator = new HeaderGenerator();
+        generator.generateHeader("java.lang.System", writer);
         writer.flush();
     }
 }
