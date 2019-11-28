@@ -61,8 +61,10 @@ public class JNIGenerator extends ClassVisitor {
                 value = constant.value.toString() + "f";
             } else if (constant.value instanceof Long) {
                 value = constant.value.toString() + "i64";
-            } else {
+            } else if (constant.value instanceof Double) {
                 value = constant.value.toString();
+            } else {
+                value = constant.value.toString() + "L";
             }
             output.println("#undef " + cm);
             output.println("#define " + cm + " " + value);

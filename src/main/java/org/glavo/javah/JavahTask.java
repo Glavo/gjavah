@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class JavahTask {
@@ -24,8 +23,8 @@ public class JavahTask {
 
     public void run() throws IOException {
         if (outputPath == null) {
-            errorHandle.println("output path is not set");
-            return;
+            outputPath = Paths.get(".").toAbsolutePath();
+            outputToSignalFile = false;
         }
 
         if (outputToSignalFile) {
@@ -138,18 +137,16 @@ public class JavahTask {
         return outputToSignalFile;
     }
 
-    public JavahTask setOutputToSignalFile(boolean outputToSignalFile) {
+    public void setOutputToSignalFile(boolean outputToSignalFile) {
         this.outputToSignalFile = outputToSignalFile;
-        return this;
     }
 
     public Path getOutputPath() {
         return outputPath;
     }
 
-    public JavahTask setOutputPath(Path outputPath) {
+    public void setOutputPath(Path outputPath) {
         this.outputPath = outputPath;
-        return this;
     }
 
     public void addClass(String name) {

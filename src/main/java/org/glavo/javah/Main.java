@@ -61,15 +61,11 @@ public class Main {
                     task.addClasspaths(args[++i]);
                     break;
                 default:
-                    for (int j = i; j < args.length; j++) {
-                        task.addClass(args[i]);
+                    while (i < args.length) {
+                        task.addClass(args[i++]);
                     }
-                    break loop;
             }
-            if (task.getClassList().isEmpty()) {
-                System.err.println("error: no classes specified");
-            }
-            task.run();
         }
+        task.run();
     }
 }

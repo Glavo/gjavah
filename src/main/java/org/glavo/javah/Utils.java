@@ -24,7 +24,11 @@ class Utils {
                 buffer.append("_2");
             } else if (ch == '[') {
                 buffer.append("_3");
-            } else if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
+            } else if ((ch >= '0' && ch <= '9')
+                    || (ch >= 'a' && ch <= 'z')
+                    || (ch >= 'A' && ch <= 'Z')
+                    || ch == '/'
+                    || ch == '.') {
                 buffer.append(ch);
             } else {
                 buffer.append(String.format("_0%04x", (int) ch));
