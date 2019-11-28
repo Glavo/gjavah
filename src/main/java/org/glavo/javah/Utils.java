@@ -1,5 +1,7 @@
 package org.glavo.javah;
 
+import org.objectweb.asm.Type;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystem;
@@ -8,9 +10,90 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.jar.Manifest;
-import java.util.regex.Pattern;
 
 class Utils {
+    static String encode(String str) {
+        StringBuilder buffer = new StringBuilder(str.length());
+
+        int len = str.length();
+        for (int i = 0; i < len; i++) {
+            char ch = str.charAt(i);
+            if (ch == '_') {
+                buffer.append("_1");
+            } else if (ch == ';') {
+                buffer.append("_2");
+            } else if (ch == '[') {
+                buffer.append("_3");
+            } else if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
+                buffer.append(ch);
+            } else {
+                buffer.append(String.format("_0%04x", (int) ch));
+            }
+        }
+        return buffer.toString();
+    }
+
+    static String mapToNativeType(Type jt) {
+        switch (jt.toString()) {
+            case "Z":
+                return "jboolean";
+            case "B":
+                return "jbyte";
+            case "C":
+                return "jchar";
+            case "S":
+                return "jshort";
+            case "I":
+                return "jint";
+            case "J":
+                return "jlong";
+            case "F":
+                return "jfloat";
+            case "D":
+                return "jdouble";
+            case "V":
+                return "void";
+            case "Ljava/lang/Class;":
+                return "jclass";
+            case "Ljava/lang/String;":
+                return "jstring";
+            case "Ljava/lang/Throwable ;":
+                return "jthrowable";
+            case "[Z":
+                return "jbooleanArray";
+            case "[B":
+                return "jbyteArray";
+            case "[C":
+                return "jcharArray";
+            case "[S":
+                return "jshortArray";
+            case "[I":
+                return "jintArray";
+            case "[J":
+                return "jlongArray";
+            case "[F":
+                return "jfloatArray";
+            case "[D":
+                return "jdoubleArray";
+        }
+
+        if (jt.toString().startsWith("[")) {
+            return "jobjectArray";
+        }
+
+        return "jobject";
+    }
+
+    static String mangledArgSignature(Type methodType) {
+        Objects.requireNonNull(methodType);
+        String str = methodType.toString();
+        int idx = str.indexOf(')');
+        if (idx == -1) {
+            throw new IllegalArgumentException(methodType.toString() + "is not a method type");
+        }
+        return encode(str.substring(1, idx));
+    }
+
     static boolean isRegularClassName(String name) {
         Objects.requireNonNull(name);
         return !name.contains("//")
@@ -58,7 +141,7 @@ class Utils {
         if (Files.isRegularFile(root)) {
             String name = root.toString().toLowerCase();
             try {
-                FileSystem fs = FileSystems.newFileSystem(root, null);
+                FileSystem fs = FileSystems.newFileSystem(root, (ClassLoader) null);
                 if (name.endsWith(".jar")) {
                     root = fs.getPath("/");
                 } else if (name.endsWith(".jmod")) {

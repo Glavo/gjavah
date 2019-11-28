@@ -14,9 +14,6 @@ public class ModulePath implements SearchPath {
 
     public ModulePath(Path path) {
         Objects.requireNonNull(path);
-        if (!Files.isDirectory(path)) {
-            throw new IllegalArgumentException(path + "is not a dir");
-        }
 
         this.path = path;
         try {
@@ -32,5 +29,10 @@ public class ModulePath implements SearchPath {
     @Override
     public Path searchClass(String className) {
         return Utils.searchFrom(paths, className);
+    }
+
+    @Override
+    public String toString() {
+        return "ModulePath[" + path + "]";
     }
 }
