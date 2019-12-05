@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.glavo.glavo:gjavah:0.1.1'
+    compile 'org.glavo.glavo:gjavah:0.2.0'
 }
 ```
 
@@ -16,8 +16,10 @@ dependencies {
 ```java
 import org.glavo.javah.*;
 
-var writer = new PrintWriter(System.out);
-HeaderGenerator.generateHeader("java.lang.Object", writer);
-writer.flush();
-
+var task = new JavahTask();
+task.setOutputDir(Paths.get(""));
+task.addRuntimeSearchPath();
+task.addClass("java.lang.Object");
+task.addClass("java.lang.String");
+task.run();
 ```
