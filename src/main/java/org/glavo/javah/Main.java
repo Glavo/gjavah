@@ -44,7 +44,6 @@ public class Main {
         }
 
         cm.parseArgs(args);
-        System.out.println(m);
         if (m.showHelp) {
             cm.usage(System.out);
             return;
