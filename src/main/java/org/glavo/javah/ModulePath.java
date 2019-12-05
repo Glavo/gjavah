@@ -1,34 +1,46 @@
 package org.glavo.javah;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ModulePath implements SearchPath {
     private final Path path;
-    private final List<Path> paths;
+    private List<Path> roots;
 
     public ModulePath(Path path) {
         Objects.requireNonNull(path);
-
+        path = path.toAbsolutePath();
         this.path = path;
-        try {
-            paths = Files.list(path)
-                    .filter(Files::isRegularFile)
-                    .flatMap(p -> Utils.getPathsFrom(p).stream())
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        if (Files.notExists(path) || !Files.isDirectory(path)) {
+            roots = Collections.emptyList();
+        } else {
+            try {
+                roots = Files.list(path)
+                        .map(Path::toAbsolutePath)
+                        .filter(Files::isRegularFile)
+                        .filter(p -> {
+                            String n = p.getFileName().toString().toLowerCase();
+                            return n.endsWith(".jar") || n.endsWith(".zip") || n.endsWith(".jmod");
+                        })
+                        .map(Utils::classPathRoot)
+                        .filter(Objects::nonNull)
+                        .flatMap(p -> SearchPath.multiReleaseRoots(p).stream())
+                        .collect(Collectors.toList());
+            } catch (IOException e) {
+                roots = Collections.emptyList();
+            }
         }
     }
 
     @Override
-    public Path searchClass(String className) {
-        return Utils.searchFrom(paths, className);
+    public Path search(ClassName name) {
+        Objects.requireNonNull(name);
+        return SearchPath.searchFromRoots(roots, name);
     }
 
     @Override

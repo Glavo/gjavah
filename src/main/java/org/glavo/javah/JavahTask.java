@@ -1,78 +1,58 @@
 package org.glavo.javah;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
-public class JavahTask {
-    private PrintWriter errorHandle = new PrintWriter(System.err);
-    private boolean outputToSignalFile = false;
-    private Path outputPath = null;
+public final class JavahTask {
+    private final List<SearchPath> searchPaths = new LinkedList<>();
+    private Path outputDir;
+    private PrintWriter errorHandle = new PrintWriter(System.err, true);
+    private final List<ClassName> classes = new LinkedList<>();
 
-    private final List<SearchPath> searchPaths = new ArrayList<>();
-    private final List<String> classList = new ArrayList<>();
-
-    public void run() throws IOException {
-        if (outputPath == null) {
-            outputPath = Paths.get(".").toAbsolutePath();
-            outputToSignalFile = false;
-        }
-
-        if (outputToSignalFile) {
-            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputPath))) {
-                writer.write(JNIGenerator.FILE_HEADER);
-                classList.stream()
-                        .map(this::search)
-                        .filter(Objects::nonNull)
-                        .filter(Files::isReadable)
-                        .map(p -> new JNIGenerator(writer, p))
-                        .forEachOrdered(JNIGenerator::generate);
-
-                writer.write(JNIGenerator.FILE_END);
-            }
-        } else {
-            for (String c : classList) {
-                Path p = search(c);
-                if (p == null) {
-                    continue;
-                }
-                try (PrintWriter output = new PrintWriter(Files.newBufferedWriter(
-                        outputPath.resolve(Utils.encode(c).replace('.', '_') + ".h")))) {
-                    output.write(JNIGenerator.FILE_HEADER);
-                    new JNIGenerator(output, p).generate();
-                    output.write(JNIGenerator.FILE_END);
-                }
+    public void run() {
+        Objects.requireNonNull(outputDir, "outputDir");
+        JNIGenerator generator = new JNIGenerator(outputDir, searchPaths, errorHandle);
+        for (ClassName cls : classes) {
+            try {
+                generator.generate(cls);
+            } catch (Exception ex) {
+                ex.printStackTrace(errorHandle);
             }
         }
     }
 
-    private Path search(String className) {
-        for (SearchPath searchPath : searchPaths) {
-            Path c = searchPath.searchClass(className);
-            if (c != null) {
-                return c;
-            }
-        }
-        errorHandle.println("class" + className + " not found");
-        return null;
+    public void addClass(ClassName name) {
+        Objects.requireNonNull(name);
+        classes.add(name);
     }
 
-    //
-    // Getters and Setters
-    //
+    public void addClass(String name) {
+        Objects.requireNonNull(name);
+        classes.add(ClassName.of(name));
+    }
+
+    public void addClasses(Iterable<String> i) {
+        Objects.requireNonNull(i);
+        i.forEach(c -> classes.add(ClassName.of(c)));
+    }
+
+    public void addRuntimeSearchPath() {
+        searchPaths.add(RuntimeSearchPath.INSTANCE);
+    }
 
     public void addSearchPath(SearchPath searchPath) {
         Objects.requireNonNull(searchPath);
         searchPaths.add(searchPath);
+    }
+
+    public void addClassPath(Path classPath) {
+        Objects.requireNonNull(classPath);
+        searchPaths.add(new ClassPath(classPath));
     }
 
     public void addModulePath(Path modulePath) {
@@ -80,80 +60,23 @@ public class JavahTask {
         searchPaths.add(new ModulePath(modulePath));
     }
 
-    public void addModulePaths(String modulePaths) {
-        Objects.requireNonNull(modulePaths);
-        Arrays.stream(modulePaths.split(File.pathSeparator))
-                .filter(s -> !"".equals(s))
-                .map(Paths::get)
-                .filter(Files::isDirectory)
-                .forEachOrdered(this::addModulePath);
+    public Path getOutputDir() {
+        return outputDir;
     }
 
-    public void addClasspath(Path classPath) {
-        Objects.requireNonNull(classPath);
-        searchPaths.add(new ClassPath(classPath));
-    }
-
-    public void addClasspaths(String cps) {
-        Arrays.stream(cps.split(File.pathSeparator))
-                .filter(s -> !"".equals(s))
-                .flatMap(s -> {
-                    if (s.endsWith(File.separatorChar + "*")) {
-                        try {
-                            return Files.list(Paths.get(s.substring(0, s.length() - 2)))
-                                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".jar"));
-                        } catch (IOException e) {
-                            return Stream.empty();
-                        }
-                    }
-                    return Stream.of(Paths.get(s));
-                })
-                .filter(Files::exists)
-                .map(ClassPath::new)
-                .forEachOrdered(searchPaths::add);
-    }
-
-    public void addRuntimeClasspath() {
-        searchPaths.add(RuntimeClassPath.INSTANCE);
-    }
-
-    public List<SearchPath> searchPaths() {
-        return searchPaths;
+    public void setOutputDir(Path outputDir) {
+        this.outputDir = outputDir;
     }
 
     public PrintWriter getErrorHandle() {
         return errorHandle;
     }
 
-    public void setErrorHandle(Writer handle) {
-        if (handle == null || handle instanceof PrintWriter) {
-            errorHandle = (PrintWriter) handle;
+    public void setErrorHandle(Writer errorHandle) {
+        if (errorHandle instanceof PrintWriter || errorHandle == null) {
+            this.errorHandle = (PrintWriter) errorHandle;
         } else {
-            errorHandle = new PrintWriter(handle);
+            this.errorHandle = new PrintWriter(errorHandle);
         }
-    }
-
-    public boolean isOutputToSignalFile() {
-        return outputToSignalFile;
-    }
-
-    public void setOutputToSignalFile(boolean outputToSignalFile) {
-        this.outputToSignalFile = outputToSignalFile;
-    }
-
-    public Path getOutputPath() {
-        return outputPath;
-    }
-
-    public void setOutputPath(Path outputPath) {
-        this.outputPath = outputPath;
-    }
-
-    public void addClass(String name) {
-        classList.add(name);
-    }
-
-    public List<String> getClassList() {
-        return classList;
     }
 }
