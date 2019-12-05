@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import static picocli.CommandLine.*;
 
-@Command(name = "gjavah", version = "gjavah %1", sortOptions = false)
+@Command(name = "gjavah", version = "gjavah ${gjavah.version}", sortOptions = false)
 public class Main {
     @Option(names = {"-p", "--module-path"}, description = "Path from which to search  modules")
     private String modulePath;
@@ -50,7 +50,8 @@ public class Main {
         }
         if (m.showVersion) {
             try (InputStream in = Main.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
-                cm.printVersionHelp(System.out, Help.Ansi.AUTO, new Manifest(in).getMainAttributes().getValue("GJavah-Version"));
+                System.setProperty("gjavah.version", new Manifest(in).getMainAttributes().getValue("GJavah-Version"));
+                cm.printVersionHelp(System.out);
             }
             return;
         }
