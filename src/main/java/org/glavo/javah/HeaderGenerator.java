@@ -1,8 +1,10 @@
 package org.glavo.javah;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,7 +67,8 @@ public final class HeaderGenerator {
             throws IOException {
         Files.createDirectories(outputFile.getParent());
         boolean first = true;
-        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
+        try (StringWriter stringWriter = new StringWriter();
+            PrintWriter writer = new PrintWriter(new BufferedWriter(stringWriter))) {
             for (String name : classNames) {
                 NativeMethodVisitor g = getRequiredNativeMethodVisitor(name);
                 if (g.isEmpty()) {
@@ -78,6 +81,8 @@ public final class HeaderGenerator {
                     classGenerateHeaderWithoutInclude(g, writer);
                 }
             }
+            writer.flush();
+            writeIfChanged(stringWriter.toString(), outputFile);
         }
     }
 
@@ -93,9 +98,24 @@ public final class HeaderGenerator {
                 .replace('.', '_')
                 .replace('/', '_')
                 .replace('$', '_') + ".h");
-            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(headerFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
+            try (StringWriter stringWriter = new StringWriter();
+                 PrintWriter writer = new PrintWriter(new BufferedWriter(stringWriter))) {
                 classGenerateHeader(g, writer);
+                writer.flush();
+                writeIfChanged(stringWriter.toString(), headerFile);
             }
+        }
+    }
+
+    private void writeIfChanged(String data, Path outputFile)
+            throws IOException {
+        boolean write = false;
+        if (outputFile.toFile().exists()) {
+            String fileData = new String(Files.readAllBytes(outputFile));
+            write = !fileData.equals(data);
+        }
+        if (write) {
+            Files.write(outputFile, data.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         }
     }
 
