@@ -109,7 +109,7 @@ public final class HeaderGenerator {
 
     private void writeIfChanged(String data, Path outputFile)
             throws IOException {
-        boolean write = false;
+        boolean write = true;
         if (outputFile.toFile().exists()) {
             String fileData = new String(Files.readAllBytes(outputFile));
             write = !fileData.equals(data);
