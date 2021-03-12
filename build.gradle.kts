@@ -34,7 +34,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
     implementation("org.ow2.asm:asm:7.2")
 
-    //testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.5.2'
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
 }
 
 tasks.compileJava {
