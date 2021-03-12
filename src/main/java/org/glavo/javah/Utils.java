@@ -11,7 +11,6 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -115,7 +114,7 @@ class Utils {
         Objects.requireNonNull(reader);
         class V extends ClassVisitor {
             V() {
-                super(Opcodes.ASM7);
+                super(Opcodes.ASM9);
             }
 
             ClassName superName = null;
