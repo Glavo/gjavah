@@ -3,4 +3,5 @@ module org.glavo.javah {
     requires jdk.zipfs;
 
     exports org.glavo.javah;
+    exports org.glavo.javah.search;
 }

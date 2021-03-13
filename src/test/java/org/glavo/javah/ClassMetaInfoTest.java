@@ -1,7 +1,6 @@
 package org.glavo.javah;
 
 import org.glavo.javah.util.ClassMetaInfo;
-import org.glavo.javah.util.ClassName;
 import org.glavo.javah.util.NativeMethod;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
@@ -32,9 +31,9 @@ public class ClassMetaInfoTest {
     @Test
     void test() throws IOException, ClassNotFoundException {
         TestData[] data = new TestData[]{
-                new TestData(ClassName.of("java.lang.Object"), null),
-                new TestData(ClassName.of("java.lang.String"), ClassName.of("java.lang.Object")),
-                new TestData(ClassName.of(C1.class.getName()), ClassName.of(C1.class.getSuperclass().getName()))
+                new TestData(ClassName.ofFullName("java.lang.Object"), null),
+                new TestData(ClassName.ofFullName("java.lang.String"), ClassName.ofFullName("java.lang.Object")),
+                new TestData(ClassName.ofFullName(C1.class.getName()), ClassName.ofFullName(C1.class.getSuperclass().getName()))
         };
         for (TestData d : data) {
             Class<?> cls = Class.forName(d.name.className());

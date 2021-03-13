@@ -1,6 +1,6 @@
 package org.glavo.javah.search;
 
-import org.glavo.javah.util.ClassName;
+import org.glavo.javah.ClassName;
 
 import java.io.IOException;
 import java.net.URI;

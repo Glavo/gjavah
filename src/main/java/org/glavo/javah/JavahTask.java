@@ -4,7 +4,7 @@ import org.glavo.javah.search.ClassPath;
 import org.glavo.javah.search.ModulePath;
 import org.glavo.javah.search.RuntimeSearchPath;
 import org.glavo.javah.search.SearchPath;
-import org.glavo.javah.util.ClassName;
+import org.glavo.javah.util.JNIGenerator;
 
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -45,12 +45,12 @@ public final class JavahTask {
 
     public void addClass(String name) {
         Objects.requireNonNull(name);
-        classes.add(ClassName.of(name));
+        classes.add(ClassName.ofFullName(name));
     }
 
     public void addClasses(Iterable<String> i) {
         Objects.requireNonNull(i);
-        i.forEach(c -> classes.add(ClassName.of(c)));
+        i.forEach(c -> classes.add(ClassName.ofFullName(c)));
     }
 
     public void addRuntimeSearchPath() {

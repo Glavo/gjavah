@@ -1,6 +1,6 @@
 package org.glavo.javah.search;
 
-import org.glavo.javah.util.ClassName;
+import org.glavo.javah.ClassName;
 
 import java.nio.file.Path;
 import java.util.Collections;

@@ -1,11 +1,8 @@
-package org.glavo.javah;
+package org.glavo.javah.util;
 
+import org.glavo.javah.ClassName;
 import org.glavo.javah.search.RuntimeSearchPath;
 import org.glavo.javah.search.SearchPath;
-import org.glavo.javah.util.ClassMetaInfo;
-import org.glavo.javah.util.ClassName;
-import org.glavo.javah.util.Constant;
-import org.glavo.javah.util.NativeMethod;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 
@@ -198,7 +195,7 @@ public class JNIGenerator {
         }
 
         if (tpe.startsWith("L") && tpe.endsWith(";")) {
-            ClassName n = ClassName.of(tpe.substring(1, tpe.length() - 1).replace('/', '.'));
+            ClassName n = ClassName.ofInternalName(tpe.substring(1, tpe.length() - 1));
             if (isThrowable(n)) {
                 return "jthrowable";
             } else {

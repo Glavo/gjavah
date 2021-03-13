@@ -20,7 +20,7 @@ dependencies {
 ```java
 import org.glavo.javah.*;
 
-var task = new JavahTask();
+JavahTask task = new JavahTask();
 task.setOutputDir(Paths.get(""));
 task.addRuntimeSearchPath();
 task.addClass("java.lang.Object");

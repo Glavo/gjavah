@@ -1,5 +1,6 @@
 package org.glavo.javah.util;
 
+import org.glavo.javah.ClassName;
 import org.objectweb.asm.*;
 
 import java.util.*;
@@ -18,8 +19,8 @@ public class ClassMetaInfo extends ClassVisitor {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        this.superClassName = superName == null ? null : ClassName.of(superName.replace('/', '.'));
-        this.name = ClassName.of(null, name.replace('/', '.'));
+        this.superClassName = superName == null ? null : ClassName.ofInternalName(superName);
+        this.name = ClassName.ofInternalName(name);
     }
 
     @Override

@@ -1,6 +1,6 @@
 package org.glavo.javah.search;
 
-import org.glavo.javah.util.ClassName;
+import org.glavo.javah.ClassName;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +17,7 @@ public interface SearchPath {
 
     default Path search(String fullName) {
         Objects.requireNonNull(fullName);
-        return search(ClassName.of(fullName));
+        return search(ClassName.ofFullName(fullName));
     }
 
     static Path searchFrom(Iterable<SearchPath> searchPaths, ClassName name) {

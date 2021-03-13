@@ -1,4 +1,4 @@
-package org.glavo.javah.util;
+package org.glavo.javah;
 
 import java.util.Objects;
 
@@ -23,7 +23,8 @@ public final class ClassName {
         return new ClassName(moduleName, className);
     }
 
-    public static ClassName of(String fullName) {
+    /* Example: "java.base/java.lang.Object" */
+    public static ClassName ofFullName(String fullName) {
         Objects.requireNonNull(fullName, "class name is null");
         int idx = fullName.indexOf('/');
         if (idx == -1) {
@@ -31,6 +32,10 @@ public final class ClassName {
         }
 
         return ClassName.of(fullName.substring(0, idx), fullName.substring(idx + 1));
+    }
+
+    public static ClassName ofInternalName(String name) {
+        return of(null, name.replace('/', '.'));
     }
 
     private ClassName(String moduleName, String className) {
@@ -55,10 +60,7 @@ public final class ClassName {
 
     @Override
     public String toString() {
-        if (moduleName == null) {
-            return className;
-        }
-        return moduleName + '/' + className;
+        return moduleName == null ? className : moduleName + '/' + className;
     }
 
 
