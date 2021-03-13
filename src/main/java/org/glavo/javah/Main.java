@@ -104,14 +104,21 @@ public final class Main {
                         System.err.println(Resource.getText("javah.error.missArg", c));
                         System.exit(-1);
                     }
+                    throw new UnsupportedOperationException("Unsupported option \"-o\"");
+                    /*
                     String outputFile = it.next();
                     task.setOutputDir(null);
                     task.setOutputFile(Paths.get(outputFile));
                     break;
+                    */
                 }
                 default:
-                    task.addClass(ClassName.ofFullName(c));
-                    break;
+                    if (c.startsWith("-")) {
+                        System.err.println(Resource.getText("javah.error.unknownOption", c));
+                    } else {
+                        task.addClass(ClassName.ofFullName(c));
+                        break;
+                    }
             }
         }
         if (!task.hasClasses()) {

@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "org.glavo"
-version = "0.3"
+version = "0.3.1"
 
 val javahMainClassName = "org.glavo.javah.Main"
 

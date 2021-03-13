@@ -9,7 +9,7 @@ public final class Text extends ListResourceBundle {
                 {"javah.help", "Usage:\n" +
                         "  gjavah [options] <classes>\n" +
                         "where [options] include:\n" +
-                        "  -o <file>                    Output file (only one of -d or -o may be used)\n" +
+                        //"  -o <file>                    Output file (only one of -d or -o may be used)\n" +
                         "  -d <dir>                     Output directory\n" +
                         "  -v  -verbose                 Enable verbose output\n" +
                         "  -h  --help  -?               Print this message\n" +
@@ -25,6 +25,7 @@ public final class Text extends ListResourceBundle {
                         "    java.base/java.io.File"},
                 {"javah.version", "gjavah version \"%s\""},
                 {"javah.error.missArg", "Error: value missing for option \"%s\""},
+                {"javah.error.unknownOption", "Error: unknown option: %s"},
                 {"javah.error.noClasses", "Error: no classes specified"}
         };
     }

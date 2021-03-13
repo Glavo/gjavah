@@ -9,7 +9,7 @@ public final class Text_zh_CN extends ListResourceBundle {
                 {"javah.help", "用法:\n" +
                         "  gjavah [options] <classes>\n" +
                         "其中, [options] 包括:\n" +
-                        "  -o <file>                    输出文件 (只能使用 -d 或 -o 之一)\n" +
+                        //"  -o <file>                    输出文件 (只能使用 -d 或 -o 之一)\n" +
                         "  -d <dir>                     输出目录\n" +
                         "  -v  -verbose                 启用详细输出\n" +
                         "  -h  --help  -?               输出此消息\n" +
@@ -25,6 +25,7 @@ public final class Text_zh_CN extends ListResourceBundle {
                         "    java.base/java.io.File"},
                 {"javah.version", "gjavah 版本 \"%s\""},
                 {"javah.error.missArg", "错误：选项 \"%s\" 缺少值"},
+                {"javah.error.unknownOption", "错误: 未知选项: %s"},
                 {"javah.error.noClasses", "错误: 未指定类"}
         };
     }
