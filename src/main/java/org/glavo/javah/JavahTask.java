@@ -15,7 +15,9 @@ public final class JavahTask {
     private final List<ClassName> classes = new LinkedList<>();
 
     public void run() {
-        Objects.requireNonNull(outputDir, "outputDir");
+        if (outputDir == null && outputFile == null) {
+            throw new AssertionError();
+        }
         JNIGenerator generator = new JNIGenerator(outputDir, searchPaths, errorHandle);
         for (ClassName cls : classes) {
             try {

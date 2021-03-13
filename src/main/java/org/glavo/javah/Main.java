@@ -1,9 +1,9 @@
 package org.glavo.javah;
 
 import org.glavo.javah.resource.Resource;
+import org.glavo.javah.resource.Version;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
 public final class Main {
@@ -39,10 +38,7 @@ public final class Main {
                     break;
                 case "-version":
                 case "--version":
-                    try (InputStream in = Main.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
-                        System.out.println(Resource.getText("javah.version",
-                                new Manifest(in).getMainAttributes().getValue("GJavah-Version")));
-                    }
+                    System.out.println(Resource.getText("javah.version", Version.VERSION));
                     return;
                 case "-h":
                 case "-help":
@@ -127,6 +123,9 @@ public final class Main {
             task.addClassPath(Paths.get(path == null ? System.getProperty("user.dir") : path).toAbsolutePath());
         }
         task.addRuntimeSearchPath();
+        if (task.getOutputFile() == null && task.getOutputDir() == null) {
+            task.setOutputDir(Paths.get(System.getProperty("user.dir")));
+        }
         task.setErrorHandle(new PrintWriter(System.err, true));
         task.run();
     }

@@ -18,7 +18,8 @@ application {
 tasks.jar {
     manifest.attributes(mapOf(
             "Implementation-Version" to "1.2",
-            "Main-Class" to javahMainClassName
+            "Main-Class" to javahMainClassName,
+            "Class-Path" to configurations.runtimeClasspath.get().files.joinToString(" ") { it.name }
     ))
 }
 
@@ -38,9 +39,27 @@ tasks.withType<JavaCompile> {
     options.release.set(9)
 }
 
+val genDir = buildDir.resolve("src-gen")
+
+sourceSets {
+    main {
+        java {
+            srcDirs("src/main/java", genDir)
+        }
+    }
+}
+
 tasks.compileJava {
     modularity.inferModulePath.set(true)
     options.release.set(9)
+
+    doFirst {
+        val pd = file("$genDir/org/glavo/javah/resource")
+        pd.mkdirs()
+        pd.resolve("Version.java").writeText(
+                file("gradle/Version.java.template").readText().format(project.version)
+        )
+    }
 
     doLast {
         val tree = fileTree(destinationDir)
