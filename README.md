@@ -2,13 +2,17 @@
 
 Gradle :
 ```
+// Temporarily unavailable, please wait for the new version
+
+/*
 repositories {
     maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    compile 'org.glavo.glavo:gjavah:0.2.0'
+    compile 'org.glavo.glavo:gjavah:0.3.0' 
 }
+8?
 ```
 
 ## Usage
