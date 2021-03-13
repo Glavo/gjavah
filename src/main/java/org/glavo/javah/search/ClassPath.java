@@ -1,11 +1,13 @@
-package org.glavo.javah;
+package org.glavo.javah.search;
+
+import org.glavo.javah.util.ClassName;
 
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static org.glavo.javah.Utils.*;
+import static org.glavo.javah.util.Utils.*;
 
 public class ClassPath implements SearchPath {
     private final Path path;

@@ -1,10 +1,10 @@
-package org.glavo.javah;
+package org.glavo.javah.util;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import static org.glavo.javah.Utils.*;
+import static org.glavo.javah.util.Utils.*;
 
 public final class Constant {
     private static final List<Class<?>> TYPES = Arrays.asList(

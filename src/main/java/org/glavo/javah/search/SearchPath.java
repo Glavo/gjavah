@@ -1,4 +1,6 @@
-package org.glavo.javah;
+package org.glavo.javah.search;
+
+import org.glavo.javah.util.ClassName;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,7 +10,7 @@ import java.util.*;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
-import static org.glavo.javah.Utils.*;
+import static org.glavo.javah.util.Utils.*;
 
 public interface SearchPath {
     Path search(ClassName name);

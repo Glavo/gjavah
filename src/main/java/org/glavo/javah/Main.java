@@ -2,6 +2,7 @@ package org.glavo.javah;
 
 import org.glavo.javah.resource.Resource;
 import org.glavo.javah.resource.Version;
+import org.glavo.javah.util.ClassName;
 
 import java.io.File;
 import java.io.PrintWriter;

@@ -1,5 +1,6 @@
 package org.glavo.javah;
 
+import org.glavo.javah.util.NativeMethod;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Type;
 

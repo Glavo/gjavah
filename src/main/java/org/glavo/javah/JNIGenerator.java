@@ -1,5 +1,11 @@
 package org.glavo.javah;
 
+import org.glavo.javah.search.RuntimeSearchPath;
+import org.glavo.javah.search.SearchPath;
+import org.glavo.javah.util.ClassMetaInfo;
+import org.glavo.javah.util.ClassName;
+import org.glavo.javah.util.Constant;
+import org.glavo.javah.util.NativeMethod;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 
@@ -8,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-import static org.glavo.javah.Utils.*;
+import static org.glavo.javah.util.Utils.*;
 
 public class JNIGenerator {
 

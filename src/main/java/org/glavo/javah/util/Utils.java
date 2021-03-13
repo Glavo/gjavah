@@ -1,4 +1,4 @@
-package org.glavo.javah;
+package org.glavo.javah.util;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-class Utils {
+public final class Utils {
     public static final int MAX_SUPPORTED_VERSION = 13;
 
     public static final List<String> MULTI_RELEASE_VERSIONS =
@@ -116,7 +116,7 @@ class Utils {
         Objects.requireNonNull(reader);
         class V extends ClassVisitor {
             V() {
-                super(Opcodes.ASM9);
+                super(Opcodes.ASM7);
             }
 
             ClassName superName = null;

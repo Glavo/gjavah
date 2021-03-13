@@ -1,13 +1,13 @@
-package org.glavo.javah;
+package org.glavo.javah.util;
 
 import org.objectweb.asm.*;
 
 import java.util.*;
 
-class ClassMetaInfo extends ClassVisitor {
-    final List<Constant> constants = new LinkedList<>();
-    final List<NativeMethod> methods = new LinkedList<>();
-    final Map<String, Integer> counts = new HashMap<>();
+public class ClassMetaInfo extends ClassVisitor {
+    public final List<Constant> constants = new LinkedList<>();
+    public final List<NativeMethod> methods = new LinkedList<>();
+    public final Map<String, Integer> counts = new HashMap<>();
 
     ClassName superClassName;
     ClassName name;
@@ -19,7 +19,7 @@ class ClassMetaInfo extends ClassVisitor {
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         this.superClassName = superName == null ? null : ClassName.of(superName.replace('/', '.'));
-        this.name = ClassName.of(name.replace('/', '.'));
+        this.name = ClassName.of(null, name.replace('/', '.'));
     }
 
     @Override
@@ -39,7 +39,7 @@ class ClassMetaInfo extends ClassVisitor {
         return null;
     }
 
-    boolean isOverloadMethod(NativeMethod method) {
+    public boolean isOverloadMethod(NativeMethod method) {
         Objects.requireNonNull(method);
         return counts.getOrDefault(method.name(), 1) > 1;
     }

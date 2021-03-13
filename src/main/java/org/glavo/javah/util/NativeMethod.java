@@ -1,4 +1,4 @@
-package org.glavo.javah;
+package org.glavo.javah.util;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -6,7 +6,7 @@ import org.objectweb.asm.Type;
 import java.util.Objects;
 import java.util.regex.Matcher;
 
-import static org.glavo.javah.Utils.*;
+import static org.glavo.javah.util.Utils.*;
 
 public final class NativeMethod {
     private final int access;

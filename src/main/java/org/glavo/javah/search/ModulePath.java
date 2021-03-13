@@ -1,4 +1,7 @@
-package org.glavo.javah;
+package org.glavo.javah.search;
+
+import org.glavo.javah.util.ClassName;
+import org.glavo.javah.util.Utils;
 
 import java.io.IOException;
 import java.nio.file.Files;

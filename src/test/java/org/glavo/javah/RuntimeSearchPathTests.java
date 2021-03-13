@@ -1,5 +1,6 @@
 package org.glavo.javah;
 
+import org.glavo.javah.search.RuntimeSearchPath;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;

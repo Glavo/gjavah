@@ -1,6 +1,7 @@
 package org.glavo.javah;
 
 
+import org.glavo.javah.util.Utils;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

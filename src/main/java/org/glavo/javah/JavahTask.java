@@ -1,5 +1,11 @@
 package org.glavo.javah;
 
+import org.glavo.javah.search.ClassPath;
+import org.glavo.javah.search.ModulePath;
+import org.glavo.javah.search.RuntimeSearchPath;
+import org.glavo.javah.search.SearchPath;
+import org.glavo.javah.util.ClassName;
+
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.file.Path;

@@ -1,8 +1,10 @@
 package org.glavo.javah;
 
+import org.glavo.javah.util.ClassMetaInfo;
+import org.glavo.javah.util.ClassName;
+import org.glavo.javah.util.NativeMethod;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import java.io.IOException;
