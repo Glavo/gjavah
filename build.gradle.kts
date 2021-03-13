@@ -18,8 +18,7 @@ application {
 tasks.jar {
     manifest.attributes(mapOf(
             "Implementation-Version" to "1.2",
-            "Main-Class" to javahMainClassName,
-            "GJavah-Version" to project.version
+            "Main-Class" to javahMainClassName
     ))
 }
 
@@ -28,19 +27,21 @@ repositories {
 }
 
 dependencies {
-    // https://mvnrepository.com/artifact/commons-cli/commons-cli
-    implementation("info.picocli:picocli:4.1.1")
-
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
     implementation("org.ow2.asm:asm:9.1")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+    options.release.set(9)
+}
+
 tasks.compileJava {
     modularity.inferModulePath.set(true)
     options.release.set(9)
-    options.encoding = "UTF-8"
+
     doLast {
         val tree = fileTree(destinationDir)
         tree.include("**/*.class")
@@ -54,7 +55,6 @@ tasks.compileJava {
         }
     }
 }
-
 
 tasks.create<Copy>("copyDependencies") {
     from(configurations.runtimeClasspath)
@@ -105,12 +105,6 @@ configure<PublishingExtension> {
             }
         }
     }
-}
-
-
-
-tasks.compileTestJava {
-    options.release.set(11)
 }
 
 tasks.test {

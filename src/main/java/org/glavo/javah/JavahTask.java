@@ -1,6 +1,5 @@
 package org.glavo.javah;
 
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.file.Path;
@@ -11,6 +10,7 @@ import java.util.Objects;
 public final class JavahTask {
     private final List<SearchPath> searchPaths = new LinkedList<>();
     private Path outputDir;
+    private Path outputFile;
     private PrintWriter errorHandle = new PrintWriter(System.err, true);
     private final List<ClassName> classes = new LinkedList<>();
 
@@ -24,6 +24,10 @@ public final class JavahTask {
                 ex.printStackTrace(errorHandle);
             }
         }
+    }
+
+    public boolean hasClasses() {
+        return !classes.isEmpty();
     }
 
     public void addClass(ClassName name) {
@@ -66,6 +70,14 @@ public final class JavahTask {
 
     public void setOutputDir(Path outputDir) {
         this.outputDir = outputDir;
+    }
+
+    public Path getOutputFile() {
+        return outputFile;
+    }
+
+    public void setOutputFile(Path outputFile) {
+        this.outputFile = outputFile;
     }
 
     public PrintWriter getErrorHandle() {
