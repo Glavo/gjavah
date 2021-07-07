@@ -21,12 +21,12 @@ dependencies {
 ```java
 import org.glavo.javah.*;
 
-JavahTask task=new JavahTask();
-        task.setOutputDir(Paths.get(""));
-        task.addRuntimeSearchPath();
-        task.addClass("java.lang.Object");
-        task.addClass("java.lang.String");
-        task.run();
+JavahTask task = new JavahTask();
+task.setOutputDir(Paths.get(""));
+task.addRuntimeSearchPath();
+task.addClass("java.lang.Object");
+task.addClass("java.lang.String");
+task.run();
 ```
 
 ### Use gjavah in console
